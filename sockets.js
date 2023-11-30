@@ -1,40 +1,40 @@
-let readyPlayerCount = 0
+let nombreJoueursPrets = 0;
 
 function listen(io) {
-  const pongNamespace = io.of('/pong')
-  pongNamespace.on('connection', (socket) => {
-    let room = 'room' + Math.floor(readyPlayerCount / 2) 
+  const espacePong = io.of('/pong');
+  espacePong.on('connection', (socket) => {
+    let salle = 'salle' + Math.floor(nombreJoueursPrets / 2);
 
-    console.log('A user connected', socket.id)
+    console.log('Un utilisateur s\'est connecté', socket.id);
 
     socket.on('ready', () => {
-      let room = 'room' + Math.floor(readyPlayerCount / 2) 
-      socket.join(room)
+      let salle = 'salle' + Math.floor(nombreJoueursPrets / 2);
+      socket.join(salle);
 
-      console.log('Player ready', socket.id, room)
+      console.log('Joueur prêt', socket.id, salle);
 
-      readyPlayerCount++
+      nombreJoueursPrets++;
 
-      if(readyPlayerCount % 2 === 0){
-        pongNamespace.in(room).emit('startGame', socket.id)
+      if (nombreJoueursPrets % 2 === 0) {
+        espacePong.in(salle).emit('startGame', socket.id);
       }
-    })
+    });
 
-    socket.on('paddleMove', (paddleData) => {
-      socket.to(room).emit('paddleMove', paddleData)
-    })
+    socket.on('paddleMove', (donneesRaquette) => {
+      socket.to(salle).emit('paddleMove', donneesRaquette);
+    });
 
-    socket.on('ballMove', (ballData) => {
-      socket.to(room).emit('ballMove', ballData)
-    })
+    socket.on('ballMove', (donneesBalle) => {
+      socket.to(salle).emit('ballMove', donneesBalle);
+    });
 
-    socket.on('disconnect', (reason) => {
-      console.log(`Client ${socket.id} disconnected ${reason}`)
-      socket.leave(room)
-    })
-  })
+    socket.on('disconnect', (raison) => {
+      console.log(`Le client ${socket.id} s'est déconnecté ${raison}`);
+      socket.leave(salle);
+    });
+  });
 }
 
 module.exports = {
   listen,
-}
+};

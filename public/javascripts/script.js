@@ -1,71 +1,71 @@
-// Canvas Related 
+// Canvas et Contexte
 const canvas = document.createElement('canvas');
 const context = canvas.getContext('2d');
-const socket = io('/pong')
-let isReferee = false
-let paddleIndex = 0;
+const socket = io('/pong');
+let isArbitre = false;
+let indiceRaquette = 0;
 
-let width = 500;
-let height = 700;
+let largeur = 500;
+let hauteur = 700;
 
-// Paddle
-let paddleHeight = 10;
-let paddleWidth = 50;
-let paddleDiff = 25;
-let paddleX = [ 225, 225 ];
-let trajectoryX = [ 0, 0 ];
-let playerMoved = false;
+// Raquettes
+let hauteurRaquette = 10;
+let largeurRaquette = 100;
+let decalageRaquette = 25;
+let positionRaquette = [225, 225];
+let trajectoireX = [0, 0];
+let joueurBouge = false;
 
-// Ball
-let ballX = 250;
-let ballY = 350;
-let ballRadius = 5;
-let ballDirection = 1;
+// Balle
+let positionBalleX = 250;
+let positionBalleY = 200;
+let rayonBalle = 5;
+let directionBalle = 1;
 
-// Speed
-let speedY = 2;
-let speedX = 0;
+// Vitesse
+let vitesseY = 2;
+let vitesseX = 0;
 
-// Score for Both Players
-let score = [ 0, 0 ];
+// Scores pour les deux joueurs
+let scores = [0, 0];
 
-// Create Canvas Element
-function createCanvas() {
+// Création du Canvas
+function creerCanvas() {
   canvas.id = 'canvas';
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = largeur;
+  canvas.height = hauteur;
   document.body.appendChild(canvas);
-  renderCanvas();
+  renduCanvas();
 }
 
-// Attente d'adversaire
-function renderIntro() {
-  // Canvas Background
+// Attente de l'adversaire
+function renduIntro() {
+  // Fond du Canvas
   context.fillStyle = 'black';
-  context.fillRect(0, 0, width, height);
+  context.fillRect(0, 0, largeur, hauteur);
 
-  // Intro Text
+  // Texte d'introduction
   context.fillStyle = 'white';
-  context.font = "32px Courier New";
+  context.font = "25px Courier New";
   context.fillText("En attente d'un adversaire", 20, (canvas.height / 2) - 30);
 }
 
-// Render Everything on Canvas
-function renderCanvas() {
-  // Canvas Background
+// Rendu de tous les éléments sur le Canvas
+function renduCanvas() {
+  // Fond du Canvas
   context.fillStyle = 'black';
-  context.fillRect(0, 0, width, height);
+  context.fillRect(0, 0, largeur, hauteur);
 
-  // Paddle Color
+  // Couleur de la Raquette
   context.fillStyle = 'white';
 
-  // Bottom Paddle
-  context.fillRect(paddleX[0], height - 20, paddleWidth, paddleHeight);
+  // Raquette du bas
+  context.fillRect(positionRaquette[0], hauteur - 20, largeurRaquette, hauteurRaquette);
 
-  // Top Paddle
-  context.fillRect(paddleX[1], 10, paddleWidth, paddleHeight);
+  // Raquette du haut
+  context.fillRect(positionRaquette[1], 10, largeurRaquette, hauteurRaquette);
 
-  // Dashed Center Line
+  // Ligne centrale en pointillés
   context.beginPath();
   context.setLineDash([4]);
   context.moveTo(0, 350);
@@ -73,153 +73,156 @@ function renderCanvas() {
   context.strokeStyle = 'grey';
   context.stroke();
 
-  // Ball
+  // Balle
   context.beginPath();
-  context.arc(ballX, ballY, ballRadius, 2 * Math.PI, false);
+  context.arc(positionBalleX, positionBalleY, rayonBalle, 2 * Math.PI, false);
   context.fillStyle = 'white';
   context.fill();
 
-  // Score
+  // Scores
   context.font = "32px Courier New";
-  context.fillText(score[0], 20, (canvas.height / 2) + 50);
-  context.fillText(score[1], 20, (canvas.height / 2) - 30);
+  context.fillText(scores[0], 20, (canvas.height / 2) + 50);
+  context.fillText(scores[1], 20, (canvas.height / 2) - 30);
 }
 
-// Reset Ball to Center
-function ballReset() {
-  ballX = width / 2;
-  ballY = height / 2;
-  speedY = 3;
+// Réinitialisation de la Balle au centre
+function reinitialiserBalle() {
+  positionBalleX = largeur / 2;
+  positionBalleY = hauteur / 2;
+  vitesseY = 2;
+
+  // Émettre un événement socket pour réinitialiser la balle
   socket.emit('ballMove', {
-    ballX,
-    ballY,
-    score,
-  })
+    positionBalleX,
+    positionBalleY,
+    scores,
+  });
 }
 
-// Adjust Ball Movement
-function ballMove() {
-  // Vertical Speed
-  ballY += speedY * ballDirection;
-  // Horizontal Speed
-  if (playerMoved) {
-    ballX += speedX;
+// Ajustement du mouvement de la Balle
+function deplacerBalle() {
+  // Vitesse Verticale
+  positionBalleY += vitesseY * directionBalle;
+  // Vitesse Horizontale
+  if (joueurBouge) {
+    positionBalleX += vitesseX;
   }
+  // Déplacement de la balle en temps réel via socket
   socket.emit('ballMove', {
-    ballX,
-    ballY,
-    score,
-  })
+    positionBalleX,
+    positionBalleY,
+    scores,
+  });
 }
 
-// Determine What Ball Bounces Off, Score Points, Reset Ball
-function ballBoundaries() {
-  // Bounce off Left Wall
-  if (ballX < 0 && speedX < 0) {
-    speedX = -speedX;
+// Détermination de ce sur quoi la Balle rebondit, marquer des points, réinitialiser la Balle
+function limitesBalle() {
+  // Rebondir sur le mur gauche
+  if (positionBalleX < 0 && vitesseX < 0) {
+    vitesseX = -vitesseX;
   }
-  // Bounce off Right Wall
-  if (ballX > width && speedX > 0) {
-    speedX = -speedX;
+  // Rebondir sur le mur droit
+  if (positionBalleX > largeur && vitesseX > 0) {
+    vitesseX = -vitesseX;
   }
-  // Bounce off player paddle (bottom)
-  if (ballY > height - paddleDiff) {
-    if (ballX >= paddleX[0] && ballX <= paddleX[0] + paddleWidth) {
-      // Add Speed on Hit
-      if (playerMoved) {
-        speedY += 1;
-        // Max Speed
-        if (speedY > 5) {
-          speedY = 5;
+  // Rebondir sur la raquette du joueur (en bas)
+  if (positionBalleY > hauteur - decalageRaquette) {
+    if (positionBalleX >= positionRaquette[0] && positionBalleX <= positionRaquette[0] + largeurRaquette) {
+      // Ajouter de la vitesse lors de l'impact
+      if (joueurBouge) {
+        vitesseY += 0.5;
+        // Vitesse maximale
+        if (vitesseY > 4) {
+          vitesseY = 4;
         }
       }
-      ballDirection = -ballDirection;
-      trajectoryX[0] = ballX - (paddleX[0] + paddleDiff);
-      speedX = trajectoryX[0] * 0.3;
+      directionBalle = -directionBalle;
+      trajectoireX[0] = positionBalleX - (positionRaquette[0] + decalageRaquette);
+      vitesseX = trajectoireX[0] * 0.2;
     } else {
-      // Reset Ball, add to Computer Score
-      ballReset();
-      score[1]++;
+      // Réinitialiser la Balle, ajouter au score de l'ordinateur
+      reinitialiserBalle();
+      scores[1]++;
     }
   }
-  // Bounce off computer paddle (top)
-  if (ballY < paddleDiff) {
-    if (ballX >= paddleX[1] && ballX <= paddleX[1] + paddleWidth) {
-      // Add Speed on Hit
-      if (playerMoved) {
-        speedY += 1;
-        // Max Speed
-        if (speedY > 5) {
-          speedY = 5;
+  // Rebondir sur la raquette de l'ordinateur (en haut)
+  if (positionBalleY < decalageRaquette) {
+    if (positionBalleX >= positionRaquette[1] && positionBalleX <= positionRaquette[1] + largeurRaquette) {
+      // Ajouter de la vitesse lors de l'impact
+      if (joueurBouge) {
+        vitesseY += 0.5;
+        // Vitesse maximale
+        if (vitesseY > 4) {
+          vitesseY = 4;
         }
       }
-      ballDirection = -ballDirection;
-      trajectoryX[1] = ballX - (paddleX[1] + paddleDiff);
-      speedX = trajectoryX[1] * 0.3;
+      directionBalle = -directionBalle;
+      trajectoireX[1] = positionBalleX - (positionRaquette[1] + decalageRaquette);
+      vitesseX = trajectoireX[1] * 0.2;
     } else {
-      ballReset();
-      score[0]++;
+      reinitialiserBalle();
+      scores[0]++;
     }
   }
 }
 
-// Called Every Frame
-function animate() {
-  if (isReferee) {
-    ballMove();
-    ballBoundaries();
+// Appelé à chaque image
+function animer() {
+  if (isArbitre) {
+    deplacerBalle();
+    limitesBalle();
   }
-  renderCanvas();
-  window.requestAnimationFrame(animate);
+  renduCanvas();
+  window.requestAnimationFrame(animer);
 }
 
-// Load Game, Reset Everything
-function loadGame() {
-  createCanvas();
-  renderIntro();
-  socket.emit('ready')
+// Chargement du jeu, réinitialisation de tout
+function chargerJeu() {
+  creerCanvas();
+  renduIntro();
+  socket.emit('ready');
 }
 
-function startGame() {
-  paddleIndex = isReferee ? 0 : 1;
-  window.requestAnimationFrame(animate);
+function demarrerJeu() {
+  indiceRaquette = isArbitre ? 0 : 1;
+  window.requestAnimationFrame(animer);
   canvas.addEventListener('mousemove', (e) => {
-    playerMoved = true;
-    paddleX[paddleIndex] = e.offsetX;
-    if (paddleX[paddleIndex] < 0) {
-      paddleX[paddleIndex] = 0;
+    joueurBouge = true;
+    positionRaquette[indiceRaquette] = e.offsetX;
+    if (positionRaquette[indiceRaquette] < 0) {
+      positionRaquette[indiceRaquette] = 0;
     }
-    if (paddleX[paddleIndex] > (width - paddleWidth)) {
-      paddleX[paddleIndex] = width - paddleWidth;
+    if (positionRaquette[indiceRaquette] > (largeur - largeurRaquette)) {
+      positionRaquette[indiceRaquette] = largeur - largeurRaquette;
     }
     socket.emit('paddleMove', {
-      xPosition: paddleX[paddleIndex]
-    })
-    // Hide Cursor
+      xPosition: positionRaquette[indiceRaquette]
+    });
+    // Cacher le curseur
     canvas.style.cursor = 'none';
   });
 }
 
-// On Load
-loadGame();
+// Au chargement
+chargerJeu();
 
 socket.on('connect', () => {
-  console.log('Connected as...', socket.id);
-})
+  console.log('Connecté en tant que...', socket.id);
+});
 
-socket.on('startGame', (refereeId) => {
-  console.log('Referee is', refereeId);
+socket.on('startGame', (idArbitre) => {
+  console.log('L\'arbitre est', idArbitre);
 
-  isReferee = socket.id === refereeId
-  startGame()
-})
+  isArbitre = socket.id === idArbitre;
+  demarrerJeu();
+});
 
-socket.on('paddleMove', (paddleData) => {
-  // Togglee 1 into a 0 and a 0 into a 1
-  const opponentPaddleIndex = 1 - paddleIndex
-  paddleX[opponentPaddleIndex] = paddleData.xPosition
-})
+socket.on('paddleMove', (donneesRaquette) => {
+  // Inverser 1 en 0 et 0 en 1 pour les raquetes pour voir quel utilisateur doit bouger
+  const indiceRaquetteAdversaire = 1 - indiceRaquette;
+  positionRaquette[indiceRaquetteAdversaire] = donneesRaquette.xPosition;
+});
 
-socket.on('ballMove', (ballData) => {
-  ({ ballX, ballY, score } = ballData)
-})
+socket.on('ballMove', (donneesBalle) => {
+  ({ positionBalleX, positionBalleY, scores } = donneesBalle);
+});
