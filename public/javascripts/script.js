@@ -1,3 +1,23 @@
+//importer la fonction
+const { createSocket } = require("dgram");
+const client = createSocket("udp4");
+const creerDonneesDMX = require('./dmxController');
+
+// Fonction pour envoyer les données DMX
+function envoyerDonneesDMX(r, g, b, univers) {
+  const donneesDMX = creerDonneesDMX(r, g, b, univers);
+  const adresseIPCible = "192.168.34.12";
+  const port = 6454;
+
+  client.send(donneesDMX, port, adresseIPCible, (erreur) => {
+    if (erreur) {
+      console.error(erreur);
+      client.close();
+    } else {
+      console.log("Données DMX envoyées !");
+    }
+  });
+}
 // Canvas et Contexte
 const canvas = document.createElement('canvas');
 const context = canvas.getContext('2d');
@@ -143,6 +163,7 @@ function limitesBalle() {
       // Réinitialiser la Balle, ajouter au score de l'ordinateur
       reinitialiserBalle();
       scores[1]++;
+      envoyerDonneesDMX(255,0,0,0);
     }
   }
   // Rebondir sur la raquette de l'ordinateur (en haut)
@@ -162,6 +183,7 @@ function limitesBalle() {
     } else {
       reinitialiserBalle();
       scores[0]++;
+      envoyerDonneesDMX(0,255,0,0);
     }
   }
 }
